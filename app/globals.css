@@ -1,26 +1,175 @@
 @import "tailwindcss";
+@custom-variant dark (&:is(.dark *));
+
+@source "../App/**/*.{js,jsx,ts,tsx}";
+@source "./**/*.{js,jsx,ts,tsx}";
+@source "../components/**/*.{js,jsx,ts,tsx}";
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --background: #080b12;
+  --foreground: #e5ecff;
+  --vp-panel: #0d1120;
+  --vp-panel-border: #1e2535;
+  --vp-outline: #2a2a35;
+  --vp-muted: #8892a4;
+  --vp-accent: #4361ee;
+  --vp-accent-soft: rgba(168, 181, 255, 0.28);
 }
 
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+
+  --color-cloud-white: #0d1120;
+  --color-canvas-fog: #111829;
+  --color-slate-text: #e5ecff;
+  --color-ash-gray: #8892a4;
+  --color-stone-border: #1e2535;
+  --color-platinum-outline: #2a2a35;
+  --color-steel-gray: #b4b2a9;
+  --color-hover-stone: #7b8ff7;
+  --color-ghost-ink: #080b12;
+  --color-chartwell-blue: #4361ee;
+  --color-sky-tint: #a8b5ff;
+
+  --color-canvas: #080b12;
+  --color-canvas-surface: #0d1120;
+  --color-canvas-elevated: #111829;
+  --color-canvas-border: #1e2535;
+  --color-canvas-muted: #8892a4;
+
+  --color-indigo-900: #1a1f3a;
+  --color-indigo-700: #2d3fcc;
+  --color-indigo-500: #4361ee;
+  --color-indigo-400: #7b8ff7;
+  --color-indigo-200: #a8b5ff;
+
+  --color-teal-900: #0a1a14;
+  --color-teal-700: #0b7a52;
+  --color-teal-500: #20c997;
+  --color-teal-300: #6eeac5;
+  --color-teal-100: #a8ffe2;
+
+  --color-gold-900: #1a1205;
+  --color-gold-700: #8a5e0a;
+  --color-gold-500: #f0a500;
+  --color-gold-300: #ffd166;
+  --color-gold-100: #ffe9a8;
+
+  --color-alert-900: #1a0a08;
+  --color-alert-700: #8a2e1a;
+  --color-alert-500: #e63946;
+  --color-alert-300: #ff7b84;
+  --color-alert-100: #ffbdc0;
+
+  --color-silver-400: #b4b2a9;
+  --color-silver-700: #2a2a35;
+
+  --font-sans: var(--font-dm-sans), "DM Sans", System, sans-serif;
+  --font-display: var(--font-space-grotesk), "DM Sans", System, sans-serif;
+  --font-mono: "DM Mono", monospace;
+  --font-roobert: "DM Sans", sans-serif;
+
+  --radius-sm: 6px;
+  --radius-md: 12px;
+  --radius-lg: 18px;
+  --radius-xl: 24px;
+  --radius-full: 9999px;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+.dark {
+  --background: #0d1120;
+  --foreground: #e5ecff;
+  --vp-panel: #111829;
+  --vp-panel-border: #2a2a35;
+  --vp-outline: #2a2a35;
+  --vp-muted: #8892a4;
+  --vp-accent: #4361ee;
+  --vp-accent-soft: rgba(168, 181, 255, 0.22);
 }
 
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: var(--font-sans);
+}
+
+.vp-ambient-grid {
+  background-color: var(--background);
+}
+
+.vp-glass {
+  background: var(--vp-panel);
+  border: 1px solid var(--vp-panel-border);
+  box-shadow: rgba(0, 0, 0, 0.05) 0px 4px 16px 0px;
+}
+
+.vp-muted {
+  color: var(--vp-muted);
+}
+
+.vp-shell {
+  margin-inline: auto;
+  width: min(1120px, 100%);
+}
+
+.vp-page {
+  min-height: 100vh;
+  padding: 1.5rem 1rem 2.5rem;
+}
+
+.vp-kicker {
+  font-size: 0.7rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  font-weight: 700;
+  color: var(--color-indigo-200);
+}
+
+.vp-headline {
+  font-family: var(--font-display);
+  letter-spacing: -0.03em;
+  line-height: 1.05;
+}
+
+.vp-card {
+  border: 1px solid var(--vp-panel-border);
+  background: var(--vp-panel);
+  border-radius: 18px;
+  box-shadow: 0 14px 36px rgba(0, 0, 0, 0.22);
+}
+
+.vp-card-soft {
+  border: 1px solid var(--vp-panel-border);
+  background: var(--color-canvas-elevated);
+  border-radius: 14px;
+}
+
+.vp-stat-value {
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.02em;
+}
+
+.vp-chip {
+  border: 1px solid var(--vp-panel-border);
+  border-radius: 9999px;
+  padding: 0.3rem 0.7rem;
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--foreground);
+  background: rgba(255, 255, 255, 0.02);
+}
+
+.vp-chip:hover {
+  transform: translateY(-2px);
+  transition:
+    transform 180ms ease,
+    border-color 180ms ease;
+  border-color: var(--vp-accent);
+}
+
+@media (min-width: 640px) {
+  .vp-page {
+    padding: 2rem 1.5rem 3rem;
+  }
 }

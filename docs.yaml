@@ -1,0 +1,2768 @@
+openapi: 3.0.3
+info:
+  title: VendorProof API
+  version: 1.0.0
+  description: API documentation for the VendorProof backend.
+tags:
+  - name: Auth
+  - name: Business
+  - name: Config
+  - name: System
+  - name: Triangle
+  - name: Pay
+paths:
+  /api/auth/signup/step-1:
+    post:
+      summary: Start signup and send OTP
+      description: Creates a user profile and sends a verification OTP to the phone number.
+      tags:
+        - Auth
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SignUpStep1Request"
+      responses:
+        "200":
+          description: OTP sent successfully
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SignUpStep1SuccessResponse"
+        "400":
+          description: Duplicate user data
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+              example:
+                status: error
+                statusCode: 400
+                message: Email or phone number already exists, login instead.
+                timestamp: "2026-05-10T12:00:00.000Z"
+
+  /api/auth/signup/step-2:
+    post:
+      summary: Verify signup OTP
+      description: Verifies OTP from step 1 and returns an access token with the next signup step.
+      tags:
+        - Auth
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SignUpStep2Request"
+      responses:
+        "200":
+          description: OTP verified successfully
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SignUpStep2SuccessResponse"
+        "401":
+          description: Invalid or expired OTP
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+              examples:
+                invalidOtp:
+                  value:
+                    status: error
+                    statusCode: 401
+                    message: Invalid OTP
+                    timestamp: "2026-05-10T12:00:00.000Z"
+                expiredOtp:
+                  value:
+                    status: error
+                    statusCode: 401
+                    message: OTP has expired
+                    timestamp: "2026-05-10T12:00:00.000Z"
+        "404":
+          description: User not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+              example:
+                status: error
+                statusCode: 404
+                message: User not found
+                timestamp: "2026-05-10T12:00:00.000Z"
+
+  /api/auth/signup/step-3:
+    post:
+      summary: Upload personal KYC documents
+      description: Uploads selfie and identity document as part of signup.
+      tags:
+        - Auth
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              $ref: "#/components/schemas/SignUpStep3Request"
+      responses:
+        "200":
+          description: KYC documents uploaded
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SignUpStep3SuccessResponse"
+        "404":
+          description: User not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /api/auth/signup/step-4:
+    post:
+      summary: Complete business profile and finalize signup
+      description: Creates business profile, optional socials and bank details, and returns access token.
+      tags:
+        - Auth
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              $ref: "#/components/schemas/SignUpStep4Request"
+      responses:
+        "201":
+          description: Business created successfully
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SignUpStep4SuccessResponse"
+        "400":
+          description: Business name already exists
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+              example:
+                status: error
+                statusCode: 400
+                message: Another business with the same name already exists, please choose a different name.
+                timestamp: "2026-05-10T12:00:00.000Z"
+        "404":
+          description: User not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /api/auth/signin:
+    post:
+      summary: Request signin OTP
+      description: Sends login OTP. If signup is incomplete, response may include a next step.
+      tags:
+        - Auth
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SignInRequest"
+      responses:
+        "200":
+          description: OTP sent
+          content:
+            application/json:
+              schema:
+                oneOf:
+                  - $ref: "#/components/schemas/SignInSuccessResponse"
+                  - $ref: "#/components/schemas/SignInIncompleteSignupResponse"
+        "404":
+          description: User not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /api/auth/verify-signin-otp:
+    post:
+      summary: Verify signin OTP
+      description: Verifies OTP and returns access token. If profile completion is pending, includes nextStep.
+      tags:
+        - Auth
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/VerifySignInOtpRequest"
+      responses:
+        "200":
+          description: OTP verified
+          content:
+            application/json:
+              schema:
+                oneOf:
+                  - $ref: "#/components/schemas/VerifySignInOtpSuccessResponse"
+                  - $ref: "#/components/schemas/VerifySignInOtpIncompleteSignupResponse"
+        "401":
+          description: Invalid or expired OTP
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "404":
+          description: User not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /api/auth/test-delete:
+    delete:
+      summary: Test delete endpoint for development
+      description: Deletes user data for testing purposes. This endpoint should be removed in production.
+      tags:
+        - Auth
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                phoneNumber:
+                  type: string
+                  example: +2348012345678
+      responses:
+        "200":
+          description: User data deleted successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: success
+                  statusCode:
+                    type: integer
+                    example: 200
+                  message:
+                    type: string
+                    example: User data deleted successfully
+        "404":
+          description: User not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /api/auth/user:
+    get:
+      summary: Get authenticated user profile
+      description: Returns the authenticated user's profile along with their associated businesses.
+      tags:
+        - Auth
+      security:
+        - BearerAuth: []
+      responses:
+        "200":
+          description: User profile retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/GetUserSuccessResponse"
+        "404":
+          description: User not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /api/business:
+    get:
+      summary: List businesses
+      description: Returns businesses filtered by optional search text and category.
+      tags:
+        - Business
+      security:
+        - BearerAuth: []
+      parameters:
+        - in: query
+          name: search
+          required: false
+          schema:
+            type: string
+          description: Search term matched against business name, description, and category.
+          example: groceries
+        - in: query
+          name: category
+          required: false
+          schema:
+            type: string
+          description: Business category filter.
+          example: Retail
+      responses:
+        "200":
+          description: Businesses retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/GetBusinessesSuccessResponse"
+
+  /api/business/{slug}:
+    get:
+      summary: Get public business profile
+      description: Returns the public profile of a business by its slug. No authentication required.
+      tags:
+        - Business
+      parameters:
+        - in: path
+          name: slug
+          required: true
+          schema:
+            type: string
+            example: ada-groceries-ltd
+      responses:
+        "200":
+          description: Business profile retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/GetPublicProfileSuccessResponse"
+        "404":
+          description: Business not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+              example:
+                status: error
+                statusCode: 404
+                message: Business not found
+                timestamp: "2026-05-10T12:00:00.000Z"
+
+  /api/business/me:
+    patch:
+      summary: Update authenticated business profile
+      description: Updates the business profile of the currently authenticated user. All fields are optional.
+      tags:
+        - Business
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              $ref: "#/components/schemas/UpdateBusinessRequest"
+      responses:
+        "200":
+          description: Business updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UpdateBusinessSuccessResponse"
+        "404":
+          description: Business not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /api/business/me/socials:
+    post:
+      summary: Add a social link
+      description: Adds a new social media link to the authenticated business. Each platform can only have one entry.
+      tags:
+        - Business
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AddSocialRequest"
+      responses:
+        "201":
+          description: Social link added successfully
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AddSocialSuccessResponse"
+        "400":
+          description: Platform already exists
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+              example:
+                status: error
+                statusCode: 400
+                message: A INSTAGRAM link already exists. Update or remove it first.
+                timestamp: "2026-05-10T12:00:00.000Z"
+
+  /api/business/me/socials/{id}:
+    delete:
+      summary: Remove a social link
+      description: Deletes a social media link by its ID from the authenticated business.
+      tags:
+        - Business
+      security:
+        - BearerAuth: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+            example: 1
+      responses:
+        "200":
+          description: Social link removed successfully
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RemoveSocialSuccessResponse"
+        "404":
+          description: Social link not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+              example:
+                status: error
+                statusCode: 404
+                message: Social link not found
+                timestamp: "2026-05-10T12:00:00.000Z"
+
+  /api/business/me/bank-details:
+    post:
+      summary: Add bank details
+      description: Adds a new bank account to the authenticated business. Setting isPrimary to true will demote all other accounts.
+      tags:
+        - Business
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AddBankDetailsRequest"
+      responses:
+        "201":
+          description: Bank details added successfully
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AddBankDetailsSuccessResponse"
+
+  /api/business/me/bank-details/{id}:
+    patch:
+      summary: Update bank details
+      description: Updates an existing bank account entry by ID. All fields are optional.
+      tags:
+        - Business
+      security:
+        - BearerAuth: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+            example: 1
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateBankDetailsRequest"
+      responses:
+        "200":
+          description: Bank details updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UpdateBankDetailsSuccessResponse"
+        "404":
+          description: Bank details not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+              example:
+                status: error
+                statusCode: 404
+                message: Bank details not found
+                timestamp: "2026-05-10T12:00:00.000Z"
+    delete:
+      summary: Remove bank details
+      description: Deletes a bank account entry by ID from the authenticated business.
+      tags:
+        - Business
+      security:
+        - BearerAuth: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+            example: 1
+      responses:
+        "200":
+          description: Bank details removed successfully
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RemoveBankDetailsSuccessResponse"
+        "404":
+          description: Bank details not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+              example:
+                status: error
+                statusCode: 404
+                message: Bank details not found
+                timestamp: "2026-05-10T12:00:00.000Z"
+
+  /api/config:
+    get:
+      summary: Get frontend configuration values
+      tags:
+        - Config
+      responses:
+        "200":
+          description: Configurations retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/GetConfigsSuccessResponse"
+
+  /api/health:
+    get:
+      summary: Health check endpoint
+      tags:
+        - System
+      responses:
+        "200":
+          description: Service is healthy
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/HealthSuccessResponse"
+        "500":
+          description: Service is unhealthy
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+              example:
+                status: error
+                statusCode: 500
+                message: API health check failed
+                timestamp: "2026-05-10T12:00:00.000Z"
+
+  /api/triangle/area:
+    post:
+      summary: Calculate triangle area
+      tags:
+        - Triangle
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/TriangleAreaRequest"
+      responses:
+        "200":
+          description: Triangle area calculated successfully
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TriangleAreaSuccessResponse"
+        "400":
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /api/business/me/payment-link:
+    get:
+      summary: Get generic payment link
+      description: Returns the business's persistent generic payment link, creating it if it does not exist yet.
+      tags:
+        - Business
+      security:
+        - BearerAuth: []
+      responses:
+        "200":
+          description: Payment link retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/GetGenericPaymentLinkSuccessResponse"
+        "401":
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+              example:
+                status: error
+                statusCode: 401
+                message: Unauthorized
+                timestamp: "2026-05-10T12:00:00.000Z"
+
+  /api/business/me/payment-links/quick:
+    get:
+      summary: List quick payment links
+      description: Returns all quick one-time payment links created by the authenticated business, ordered by most recent.
+      tags:
+        - Business
+      security:
+        - BearerAuth: []
+      responses:
+        "200":
+          description: Quick links retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ListQuickLinksSuccessResponse"
+        "401":
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+              example:
+                status: error
+                statusCode: 401
+                message: Unauthorized
+                timestamp: "2026-05-10T12:00:00.000Z"
+    post:
+      summary: Create a quick one-time payment link
+      description: Generates a one-time payment link with an optional fixed amount, description, and expiry.
+      tags:
+        - Business
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateQuickLinkRequest"
+      responses:
+        "201":
+          description: Quick link created successfully
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CreateQuickLinkSuccessResponse"
+        "400":
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "401":
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+              example:
+                status: error
+                statusCode: 401
+                message: Unauthorized
+                timestamp: "2026-05-10T12:00:00.000Z"
+
+  /api/business/me/payment-links/quick/{id}:
+    delete:
+      summary: Delete a quick payment link
+      description: Permanently deletes a quick payment link owned by the authenticated business.
+      tags:
+        - Business
+      security:
+        - BearerAuth: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+            example: 10
+      responses:
+        "200":
+          description: Quick link deleted successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: success
+                  statusCode:
+                    type: integer
+                    example: 200
+                  message:
+                    type: string
+                    example: Quick link deleted
+        "401":
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+              example:
+                status: error
+                statusCode: 401
+                message: Unauthorized
+                timestamp: "2026-05-10T12:00:00.000Z"
+        "404":
+          description: Quick link not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+              example:
+                status: error
+                statusCode: 404
+                message: Quick link not found
+                timestamp: "2026-05-10T12:00:00.000Z"
+
+  /api/business/me/services:
+    get:
+      summary: List services
+      description: Returns all services created by the authenticated business, ordered by most recent.
+      tags:
+        - Business
+      security:
+        - BearerAuth: []
+      responses:
+        "200":
+          description: Services retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ListServicesSuccessResponse"
+        "401":
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+              example:
+                status: error
+                statusCode: 401
+                message: Unauthorized
+                timestamp: "2026-05-10T12:00:00.000Z"
+    post:
+      summary: Create a service
+      description: Creates a new service with a dedicated payment link. Optionally links a bank account for payouts.
+      tags:
+        - Business
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateServiceRequest"
+      responses:
+        "201":
+          description: Service created successfully
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CreateServiceSuccessResponse"
+        "400":
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "401":
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+              example:
+                status: error
+                statusCode: 401
+                message: Unauthorized
+                timestamp: "2026-05-10T12:00:00.000Z"
+        "404":
+          description: Bank account not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+              example:
+                status: error
+                statusCode: 404
+                message: Bank account not found
+                timestamp: "2026-05-10T12:00:00.000Z"
+
+  /api/business/me/services/{id}:
+    patch:
+      summary: Update a service
+      description: Updates an existing service by ID. All fields are optional.
+      tags:
+        - Business
+      security:
+        - BearerAuth: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+            example: 1
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateServiceRequest"
+      responses:
+        "200":
+          description: Service updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UpdateServiceSuccessResponse"
+        "400":
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "401":
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+              example:
+                status: error
+                statusCode: 401
+                message: Unauthorized
+                timestamp: "2026-05-10T12:00:00.000Z"
+        "404":
+          description: Service or bank account not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+              example:
+                status: error
+                statusCode: 404
+                message: Service not found
+                timestamp: "2026-05-10T12:00:00.000Z"
+    delete:
+      summary: Delete a service
+      description: Permanently deletes a service by ID from the authenticated business.
+      tags:
+        - Business
+      security:
+        - BearerAuth: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+            example: 1
+      responses:
+        "200":
+          description: Service deleted successfully
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DeleteServiceSuccessResponse"
+        "401":
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+              example:
+                status: error
+                statusCode: 401
+                message: Unauthorized
+                timestamp: "2026-05-10T12:00:00.000Z"
+        "404":
+          description: Service not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+              example:
+                status: error
+                statusCode: 404
+                message: Service not found
+                timestamp: "2026-05-10T12:00:00.000Z"
+
+  /api/business/me/transactions:
+    get:
+      summary: Get business transaction history
+      description: Returns payment transactions for the authenticated business ordered by latest first.
+      tags:
+        - Business
+      security:
+        - BearerAuth: []
+      responses:
+        "200":
+          description: Transaction history retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/GetBusinessTransactionHistorySuccessResponse"
+        "401":
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+              example:
+                status: error
+                statusCode: 401
+                message: Unauthorized
+                timestamp: "2026-05-10T12:00:00.000Z"
+
+  /api/pay/verify/{squadRef}:
+    get:
+      summary: Verify a payment
+      description: Checks the status of a payment by its Squad transaction reference. If the payment is pending and Squad confirms it server-side, the status is updated to COMPLETED immediately. Returns a rating token when the service has already been rendered.
+      tags:
+        - Pay
+      parameters:
+        - in: path
+          name: squadRef
+          required: true
+          schema:
+            type: string
+            example: SQCHIZ12345678
+      responses:
+        "200":
+          description: Payment status returned
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/VerifyPaymentSuccessResponse"
+        "400":
+          description: Payment failed
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+              example:
+                status: error
+                statusCode: 400
+                message: Payment failed
+                timestamp: "2026-05-10T12:00:00.000Z"
+        "404":
+          description: Payment not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+              example:
+                status: error
+                statusCode: 404
+                message: Payment not found
+                timestamp: "2026-05-10T12:00:00.000Z"
+
+  /api/pay/webhook/squad:
+    post:
+      summary: Squad payment webhook
+      description: Receives payment event notifications from Squad. The request body is verified using the `x-squad-encrypted-body` HMAC signature header before processing. This endpoint is called by Squad — not by your frontend.
+      tags:
+        - Pay
+      parameters:
+        - in: header
+          name: x-squad-encrypted-body
+          required: true
+          schema:
+            type: string
+            example: "abc123hmacsha512hash"
+          description: HMAC-SHA512 signature of the raw request body, provided by Squad.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                Event:
+                  type: string
+                  example: charge_completed
+                Body:
+                  type: object
+                  properties:
+                    transaction_ref:
+                      type: string
+                      example: SQCHIZ12345678
+                    transaction_status:
+                      type: string
+                      example: success
+      responses:
+        "200":
+          description: Webhook processed successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: success
+        "401":
+          description: Invalid webhook signature
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+              example:
+                status: error
+                statusCode: 401
+                message: Invalid webhook signature
+                timestamp: "2026-05-10T12:00:00.000Z"
+
+  /api/pay/rate/{ratingToken}:
+    get:
+      summary: Get rating page data
+      description: Returns payment and business details needed to render the buyer rating page. Fails if the link is expired or has already been rated.
+      tags:
+        - Pay
+      parameters:
+        - in: path
+          name: ratingToken
+          required: true
+          schema:
+            type: string
+            example: abc123xyz
+      responses:
+        "200":
+          description: Rating page data retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/GetRatingPageSuccessResponse"
+        "400":
+          description: Rating already submitted or link expired
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+              example:
+                status: error
+                statusCode: 400
+                message: You have already submitted a rating
+                timestamp: "2026-05-10T12:00:00.000Z"
+        "404":
+          description: Rating link not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+              example:
+                status: error
+                statusCode: 404
+                message: Rating link not found
+                timestamp: "2026-05-10T12:00:00.000Z"
+    post:
+      summary: Submit a vendor rating
+      description: Submits a buyer rating (1–5) for a vendor. Updates the vendor's trust score and marks the payment as completed.
+      tags:
+        - Pay
+      parameters:
+        - in: path
+          name: ratingToken
+          required: true
+          schema:
+            type: string
+            example: abc123xyz
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SubmitRatingRequest"
+      responses:
+        "200":
+          description: Rating submitted successfully
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SubmitRatingSuccessResponse"
+        "400":
+          description: Rating already submitted or link expired
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+              example:
+                status: error
+                statusCode: 400
+                message: You have already submitted a rating
+                timestamp: "2026-05-10T12:00:00.000Z"
+        "404":
+          description: Rating link not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+              example:
+                status: error
+                statusCode: 404
+                message: Rating link not found
+                timestamp: "2026-05-10T12:00:00.000Z"
+
+  /api/pay/{token}:
+    get:
+      summary: Get payment page data
+      description: Returns the business profile and payment link details needed to render the buyer checkout page. Validates that the link is active and not expired.
+      tags:
+        - Pay
+      parameters:
+        - in: path
+          name: token
+          required: true
+          schema:
+            type: string
+            example: abc123xyz
+      responses:
+        "200":
+          description: Payment page data retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/GetPaymentPageSuccessResponse"
+        "400":
+          description: Payment link already used or expired
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+              example:
+                status: error
+                statusCode: 400
+                message: This payment link has already been used
+                timestamp: "2026-05-10T12:00:00.000Z"
+        "404":
+          description: Payment link not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+              example:
+                status: error
+                statusCode: 404
+                message: Payment link not found
+                timestamp: "2026-05-10T12:00:00.000Z"
+    post:
+      summary: Initiate a payment
+      description: Records a payment against a payment link. If the service has already been rendered, a rating token is returned immediately; otherwise the buyer receives an email when the service is delivered.
+      tags:
+        - Pay
+      parameters:
+        - in: path
+          name: token
+          required: true
+          schema:
+            type: string
+            example: abc123xyz
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/InitiatePaymentRequest"
+      responses:
+        "201":
+          description: Payment recorded successfully
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/InitiatePaymentSuccessResponse"
+        "400":
+          description: Link already used, expired, or amount missing
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+              example:
+                status: error
+                statusCode: 400
+                message: Amount is required for this payment link
+                timestamp: "2026-05-10T12:00:00.000Z"
+        "404":
+          description: Payment link not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+              example:
+                status: error
+                statusCode: 404
+                message: Payment link not found
+                timestamp: "2026-05-10T12:00:00.000Z"
+
+components:
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+  schemas:
+    ErrorResponse:
+      type: object
+      properties:
+        status:
+          type: string
+          example: error
+        statusCode:
+          type: integer
+          example: 400
+        message:
+          type: string
+          example: Validation Error
+        timestamp:
+          type: string
+          format: date-time
+
+    SignUpStep1Request:
+      type: object
+      required:
+        - firstName
+        - lastName
+        - phoneNumber
+      properties:
+        firstName:
+          type: string
+          example: Ada
+        lastName:
+          type: string
+          example: Okafor
+        email:
+          type: string
+          format: email
+          example: ada@vendorproof.app
+        phoneNumber:
+          type: string
+          example: +2348012345678
+
+    SignUpStep1SuccessResponse:
+      type: object
+      properties:
+        status:
+          type: string
+          example: success
+        statusCode:
+          type: integer
+          example: 200
+        message:
+          type: string
+          example: OTP sent to registered phone number
+        data:
+          type: object
+          properties:
+            nextStep:
+              type: integer
+              example: 2
+
+    SignUpStep2Request:
+      type: object
+      required:
+        - phoneNumber
+        - otpCode
+      properties:
+        phoneNumber:
+          type: string
+          example: +2348012345678
+        otpCode:
+          type: string
+          example: "123456"
+
+    SignUpStep2SuccessResponse:
+      type: object
+      properties:
+        status:
+          type: string
+          example: success
+        statusCode:
+          type: integer
+          example: 200
+        message:
+          type: string
+          example: OTP verified successfully
+        data:
+          type: object
+          properties:
+            accessToken:
+              type: string
+              example: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+            nextStep:
+              type: integer
+              example: 3
+
+    SignUpStep3Request:
+      type: object
+      properties:
+        kycSelfie:
+          type: string
+          format: binary
+          description: Personal selfie image for KYC.
+        kycIdDocument:
+          type: string
+          format: binary
+          description: Identity document image for KYC.
+
+    SignUpStep3SuccessResponse:
+      type: object
+      properties:
+        status:
+          type: string
+          example: success
+        statusCode:
+          type: integer
+          example: 200
+        message:
+          type: string
+          example: KYC documents uploaded successfully
+        data:
+          type: object
+          properties:
+            nextStep:
+              type: integer
+              example: 4
+
+    SignUpStep4Request:
+      type: object
+      required:
+        - businessName
+      properties:
+        businessName:
+          type: string
+          example: Ada Groceries Ltd
+        businessDescription:
+          type: string
+          example: Retail grocery supplier for households and restaurants.
+        businessEmail:
+          type: string
+          format: email
+          example: hello@adagroceries.com
+        businessPhoneNumber:
+          type: string
+          example: +2348012345678
+        businessAlternativePhoneNumber:
+          type: string
+          example: +2348098765432
+        businessCategory:
+          type: string
+          example: Retail
+        socials:
+          type: string
+          description: JSON string array of socials.
+          example: '[{"platform":"INSTAGRAM","url":"https://instagram.com/adagroceries"}]'
+        bankDetails:
+          type: string
+          description: JSON string object for bank details.
+          example: '{"accountName":"Ada Groceries Ltd","accountNumber":"0123456789","bankName":"Mock Bank","bankCode":"999"}'
+        businessLogo:
+          type: string
+          format: binary
+          description: Single business logo image.
+        businessShowCaseImages:
+          type: array
+          description: Up to 10 showcase images.
+          items:
+            type: string
+            format: binary
+        kycBusinessCacDocument:
+          type: string
+          format: binary
+          description: CAC document image for business verification.
+        kycBusinessTinNumber:
+          type: string
+          description: TIN value used when CAC document is not provided.
+          example: 12345678-0001
+
+    SignUpStep4SuccessResponse:
+      type: object
+      properties:
+        status:
+          type: string
+          example: success
+        statusCode:
+          type: integer
+          example: 201
+        message:
+          type: string
+          example: Business created successfully
+        data:
+          type: object
+          properties:
+            accessToken:
+              type: string
+              example: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+
+    SignInRequest:
+      type: object
+      required:
+        - phoneNumber
+      properties:
+        phoneNumber:
+          type: string
+          example: +2348012345678
+
+    SignInSuccessResponse:
+      type: object
+      properties:
+        status:
+          type: string
+          example: success
+        statusCode:
+          type: integer
+          example: 200
+        message:
+          type: string
+          example: OTP sent to your phone number
+
+    SignInIncompleteSignupResponse:
+      type: object
+      properties:
+        status:
+          type: string
+          example: success
+        statusCode:
+          type: integer
+          example: 200
+        message:
+          type: string
+          example: OTP sent to registered phone number
+        data:
+          type: object
+          properties:
+            nextStep:
+              type: integer
+              example: 2
+
+    VerifySignInOtpRequest:
+      type: object
+      required:
+        - phoneNumber
+        - otp
+      properties:
+        phoneNumber:
+          type: string
+          example: +2348012345678
+        otp:
+          type: string
+          example: "123456"
+
+    VerifySignInOtpSuccessResponse:
+      type: object
+      properties:
+        status:
+          type: string
+          example: success
+        statusCode:
+          type: integer
+          example: 200
+        message:
+          type: string
+          example: OTP verified successfully
+        data:
+          type: object
+          properties:
+            accessToken:
+              type: string
+              example: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+
+    VerifySignInOtpIncompleteSignupResponse:
+      type: object
+      properties:
+        status:
+          type: string
+          example: success
+        statusCode:
+          type: integer
+          example: 200
+        message:
+          type: string
+          example: Please complete your profile by providing KYC documents
+        data:
+          type: object
+          properties:
+            nextStep:
+              type: integer
+              enum:
+                - 3
+                - 4
+              example: 3
+            accessToken:
+              type: string
+              example: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+
+    GetConfigsSuccessResponse:
+      type: object
+      properties:
+        status:
+          type: string
+          example: success
+        statusCode:
+          type: integer
+          example: 200
+        message:
+          type: string
+          example: Configurations retrieved successfully
+        data:
+          type: object
+          properties:
+            tierNames:
+              type: array
+              items:
+                type: string
+              example:
+                - UNVERIFIED
+                - BRONZE
+                - SILVER
+                - GOLD
+                - PLATINUM
+                - DIAMOND
+            socials:
+              type: array
+              items:
+                type: string
+              example:
+                - FACEBOOK
+                - TWITTER
+                - LINKEDIN
+                - INSTAGRAM
+                - TIKTOK
+                - YOUTUBE
+                - WEBSITE
+                - OTHER
+            businessVerificationTypes:
+              type: array
+              items:
+                type: string
+              example:
+                - CAC
+                - NIN
+                - UTILITY_BILL
+                - SELFIE
+                - TIN
+                - OTHER
+
+    HealthSuccessResponse:
+      type: object
+      properties:
+        status:
+          type: string
+          example: success
+        statusCode:
+          type: integer
+          example: 200
+        message:
+          type: string
+          example: API is healthy
+        data:
+          nullable: true
+          example: null
+
+    TriangleAreaRequest:
+      type: object
+      required:
+        - base
+        - height
+      properties:
+        base:
+          type: number
+          example: 10
+        height:
+          type: number
+          example: 5
+
+    TriangleAreaSuccessResponse:
+      type: object
+      properties:
+        status:
+          type: string
+          example: success
+        statusCode:
+          type: integer
+          example: 200
+        message:
+          type: string
+          example: Triangle area calculated successfully
+        data:
+          type: object
+          properties:
+            area:
+              type: number
+              example: 25
+        meta:
+          nullable: true
+          example: null
+
+    GetUserSuccessResponse:
+      type: object
+      properties:
+        status:
+          type: string
+          example: success
+        statusCode:
+          type: integer
+          example: 200
+        data:
+          type: object
+          properties:
+            id:
+              type: integer
+              example: 1
+            firstName:
+              type: string
+              example: Ada
+            lastName:
+              type: string
+              example: Okafor
+            email:
+              type: string
+              format: email
+              example: ada@vendorproof.app
+            phoneNumber:
+              type: string
+              example: +2348012345678
+            business:
+              $ref: "#/components/schemas/BusinessSummary"
+
+    GetBusinessesSuccessResponse:
+      type: object
+      properties:
+        status:
+          type: string
+          example: success
+        statusCode:
+          type: integer
+          example: 200
+        data:
+          type: array
+          items:
+            $ref: "#/components/schemas/BusinessListItem"
+
+    BusinessListItem:
+      type: object
+      properties:
+        id:
+          type: integer
+          example: 1
+        name:
+          type: string
+          example: Ada Groceries Ltd
+        description:
+          type: string
+          nullable: true
+          example: Retail grocery supplier for households and restaurants.
+        logo:
+          type: string
+          nullable: true
+          example: https://res.cloudinary.com/demo/image/upload/logo.jpg
+        category:
+          type: string
+          nullable: true
+          example: Retail
+        slug:
+          type: string
+          example: ada-groceries-ltd
+        trustScore:
+          type: number
+          example: 72.5
+        kycStatus:
+          type: string
+          example: PENDING
+        tier:
+          type: string
+          nullable: true
+          example: BRONZE
+        showCaseImages:
+          type: array
+          items:
+            type: string
+          example:
+            - https://res.cloudinary.com/demo/image/upload/img1.jpg
+
+    BusinessSummary:
+      type: object
+      properties:
+        id:
+          type: integer
+          example: 1
+        name:
+          type: string
+          example: Ada Groceries Ltd
+        slug:
+          type: string
+          example: ada-groceries-ltd
+        logo:
+          type: string
+          nullable: true
+          example: https://res.cloudinary.com/demo/image/upload/logo.jpg
+        kycStatus:
+          type: string
+          example: PENDING
+        showCaseImages:
+          type: array
+          items:
+            type: string
+          example:
+            - https://res.cloudinary.com/demo/image/upload/img1.jpg
+        socials:
+          type: array
+          items:
+            $ref: "#/components/schemas/Social"
+        category:
+          type: string
+          nullable: true
+          example: Retail
+        trustScore:
+          type: number
+          example: 72.5
+
+    Social:
+      type: object
+      properties:
+        id:
+          type: integer
+          example: 1
+        platform:
+          type: string
+          example: INSTAGRAM
+        url:
+          type: string
+          example: https://instagram.com/adagroceries
+
+    BankDetails:
+      type: object
+      properties:
+        id:
+          type: integer
+          example: 1
+        bankName:
+          type: string
+          example: Mock Bank
+        accountNumber:
+          type: string
+          example: "0123456789"
+        accountName:
+          type: string
+          example: Ada Groceries Ltd
+        isPrimary:
+          type: boolean
+          example: true
+
+    GetPublicProfileSuccessResponse:
+      type: object
+      properties:
+        status:
+          type: string
+          example: success
+        statusCode:
+          type: integer
+          example: 200
+        data:
+          type: object
+          properties:
+            id:
+              type: integer
+              example: 1
+            name:
+              type: string
+              example: Ada Groceries Ltd
+            description:
+              type: string
+              nullable: true
+              example: Retail grocery supplier for households and restaurants.
+            logo:
+              type: string
+              nullable: true
+              example: https://res.cloudinary.com/demo/image/upload/logo.jpg
+            showCaseImages:
+              type: array
+              items:
+                type: string
+              example:
+                - https://res.cloudinary.com/demo/image/upload/img1.jpg
+            email:
+              type: string
+              nullable: true
+              example: hello@adagroceries.com
+            phoneNumber:
+              type: string
+              nullable: true
+              example: +2348012345678
+            alternativePhoneNumber:
+              type: string
+              nullable: true
+              example: +2348098765432
+            category:
+              type: string
+              nullable: true
+              example: Retail
+            slug:
+              type: string
+              example: ada-groceries-ltd
+            trustScore:
+              type: number
+              example: 72.5
+            kycStatus:
+              type: string
+              example: PENDING
+            paymentLink:
+              type: string
+              nullable: true
+              example: https://pay.vendorproof.app/ada-groceries-ltd
+            qrCodeUrl:
+              type: string
+              nullable: true
+              example: https://res.cloudinary.com/demo/image/upload/qr.png
+            createdAt:
+              type: string
+              format: date-time
+              example: "2026-01-15T09:00:00.000Z"
+            socials:
+              type: array
+              items:
+                $ref: "#/components/schemas/Social"
+            tier:
+              type: object
+              nullable: true
+              properties:
+                name:
+                  type: string
+                  example: BRONZE
+                description:
+                  type: string
+                  nullable: true
+                  example: Entry-level verified vendor
+            trustScoreHistories:
+              type: array
+              items:
+                type: object
+                properties:
+                  score:
+                    type: number
+                    example: 68.0
+                  createdAt:
+                    type: string
+                    format: date-time
+                    example: "2026-04-01T10:00:00.000Z"
+            services:
+              type: array
+              items:
+                type: object
+                properties:
+                  id:
+                    type: integer
+                    example: 12
+                  name:
+                    type: string
+                    example: Website Design
+                  description:
+                    type: string
+                    nullable: true
+                    example: Full business website build
+            ratingsSummary:
+              type: number
+              nullable: true
+              example: 4.6
+            ratingsCount:
+              type: integer
+              example: 27
+            reviews:
+              type: array
+              items:
+                type: object
+                properties:
+                  reviewerName:
+                    type: string
+                    example: Jane Doe
+                  rating:
+                    type: integer
+                    example: 5
+                  comment:
+                    type: string
+                    nullable: true
+                    example: Great service and fast delivery.
+                  createdAt:
+                    type: string
+                    format: date-time
+                    example: "2026-05-10T09:00:00.000Z"
+            totalAmountTransacted:
+              type: number
+              example: 2500000
+            successfulTransactionsCount:
+              type: integer
+              example: 183
+            totalVerifiedBuyers:
+              type: integer
+              example: 141
+            trustGrowth:
+              type: string
+              example: +8.3% in last 30 days
+
+    UpdateBusinessRequest:
+      type: object
+      properties:
+        name:
+          type: string
+          example: Ada Groceries Ltd
+        description:
+          type: string
+          example: Retail grocery supplier for households and restaurants.
+        email:
+          type: string
+          format: email
+          example: hello@adagroceries.com
+        phoneNumber:
+          type: string
+          example: +2348012345678
+        alternativePhoneNumber:
+          type: string
+          example: +2348098765432
+        category:
+          type: string
+          example: Retail
+        businessLogo:
+          type: string
+          format: binary
+          description: Replaces the current business logo.
+        businessShowCaseImages:
+          type: array
+          description: Replaces all current showcase images. Up to 10 images.
+          items:
+            type: string
+            format: binary
+
+    UpdateBusinessSuccessResponse:
+      type: object
+      properties:
+        status:
+          type: string
+          example: success
+        statusCode:
+          type: integer
+          example: 200
+        data:
+          type: object
+          properties:
+            id:
+              type: integer
+              example: 1
+            name:
+              type: string
+              example: Ada Groceries Ltd
+            slug:
+              type: string
+              example: ada-groceries-ltd
+            description:
+              type: string
+              nullable: true
+              example: Retail grocery supplier for households and restaurants.
+            email:
+              type: string
+              nullable: true
+              example: hello@adagroceries.com
+            phoneNumber:
+              type: string
+              nullable: true
+              example: +2348012345678
+            alternativePhoneNumber:
+              type: string
+              nullable: true
+              example: +2348098765432
+            category:
+              type: string
+              nullable: true
+              example: Retail
+            logo:
+              type: string
+              nullable: true
+              example: https://res.cloudinary.com/demo/image/upload/logo.jpg
+            showCaseImages:
+              type: array
+              items:
+                type: string
+              example:
+                - https://res.cloudinary.com/demo/image/upload/img1.jpg
+            kycStatus:
+              type: string
+              example: PENDING
+            trustScore:
+              type: number
+              example: 72.5
+
+    AddSocialRequest:
+      type: object
+      required:
+        - platform
+        - url
+      properties:
+        platform:
+          type: string
+          enum:
+            - FACEBOOK
+            - TWITTER
+            - LINKEDIN
+            - INSTAGRAM
+            - TIKTOK
+            - YOUTUBE
+            - WEBSITE
+            - OTHER
+          example: INSTAGRAM
+        url:
+          type: string
+          format: uri
+          example: https://instagram.com/adagroceries
+
+    AddSocialSuccessResponse:
+      type: object
+      properties:
+        status:
+          type: string
+          example: success
+        statusCode:
+          type: integer
+          example: 201
+        data:
+          $ref: "#/components/schemas/Social"
+
+    RemoveSocialSuccessResponse:
+      type: object
+      properties:
+        status:
+          type: string
+          example: success
+        statusCode:
+          type: integer
+          example: 200
+        message:
+          type: string
+          example: Social link removed
+
+    AddBankDetailsRequest:
+      type: object
+      required:
+        - bankName
+        - accountNumber
+        - accountName
+      properties:
+        bankName:
+          type: string
+          example: Mock Bank
+        accountNumber:
+          type: string
+          minLength: 10
+          example: "0123456789"
+        accountName:
+          type: string
+          example: Ada Groceries Ltd
+        isPrimary:
+          type: string
+          enum:
+            - "true"
+            - "false"
+          description: Pass "true" to set as the primary account. Demotes all others.
+          example: "true"
+
+    AddBankDetailsSuccessResponse:
+      type: object
+      properties:
+        status:
+          type: string
+          example: success
+        statusCode:
+          type: integer
+          example: 201
+        data:
+          $ref: "#/components/schemas/BankDetails"
+
+    UpdateBankDetailsRequest:
+      type: object
+      properties:
+        bankName:
+          type: string
+          example: Mock Bank
+        accountNumber:
+          type: string
+          minLength: 10
+          example: "0123456789"
+        accountName:
+          type: string
+          example: Ada Groceries Ltd
+        isPrimary:
+          type: string
+          enum:
+            - "true"
+            - "false"
+          description: Pass "true" to promote this account as primary. Demotes all others.
+          example: "true"
+
+    UpdateBankDetailsSuccessResponse:
+      type: object
+      properties:
+        status:
+          type: string
+          example: success
+        statusCode:
+          type: integer
+          example: 200
+        data:
+          $ref: "#/components/schemas/BankDetails"
+
+    RemoveBankDetailsSuccessResponse:
+      type: object
+      properties:
+        status:
+          type: string
+          example: success
+        statusCode:
+          type: integer
+          example: 200
+        message:
+          type: string
+          example: Bank details removed
+
+    GetGenericPaymentLinkSuccessResponse:
+      type: object
+      properties:
+        status:
+          type: string
+          example: success
+        statusCode:
+          type: integer
+          example: 200
+        data:
+          type: object
+          properties:
+            token:
+              type: string
+              example: abc123xyz
+            url:
+              type: string
+              example: /pay/abc123xyz
+
+    ListQuickLinksSuccessResponse:
+      type: object
+      properties:
+        status:
+          type: string
+          example: success
+        statusCode:
+          type: integer
+          example: 200
+        data:
+          type: array
+          items:
+            type: object
+            properties:
+              id:
+                type: integer
+                example: 10
+              token:
+                type: string
+                example: abc123xyz
+              amount:
+                type: number
+                nullable: true
+                example: 5000
+              description:
+                type: string
+                nullable: true
+                example: Logo design deposit
+              isOneTime:
+                type: boolean
+                example: true
+              isUsed:
+                type: boolean
+                example: false
+              expiresAt:
+                type: string
+                format: date-time
+                nullable: true
+                example: "2026-05-13T12:00:00.000Z"
+              createdAt:
+                type: string
+                format: date-time
+                example: "2026-05-11T10:00:00.000Z"
+              url:
+                type: string
+                example: /pay/abc123xyz
+
+    VerifyPaymentSuccessResponse:
+      type: object
+      properties:
+        status:
+          type: string
+          example: success
+        statusCode:
+          type: integer
+          example: 200
+        data:
+          type: object
+          properties:
+            status:
+              type: string
+              enum: [COMPLETED, PENDING]
+              example: COMPLETED
+            message:
+              type: string
+              example: "Payment confirmed. You can rate this vendor now."
+            business:
+              type: object
+              nullable: true
+              properties:
+                name:
+                  type: string
+                  example: Acme Design Studio
+                slug:
+                  type: string
+                  example: acme-design-studio
+                logo:
+                  type: string
+                  nullable: true
+                  example: https://res.cloudinary.com/demo/image/upload/logo.jpg
+                tier:
+                  type: object
+                  nullable: true
+                  properties:
+                    name:
+                      type: string
+                      example: BRONZE
+                trustScore:
+                  type: number
+                  example: 72.5
+            ratingToken:
+              type: string
+              nullable: true
+              description: Present only when status is COMPLETED and the service has already been rendered.
+              example: rating_abc123xyz
+            amount:
+              type: number
+              nullable: true
+              description: Present when payment is completed.
+              example: 5000
+            buyerName:
+              type: string
+              nullable: true
+              example: Emeka Obi
+            buyerEmail:
+              type: string
+              format: email
+              nullable: true
+              example: adejare@gmail.com
+            transactionReference:
+              type: string
+              nullable: true
+              example: txn_abc123xyz
+
+    CreateQuickLinkRequest:
+      type: object
+      properties:
+        amount:
+          type: string
+          description: Fixed amount for this link. Buyers cannot change it. Pass as a numeric string.
+          example: "5000"
+        description:
+          type: string
+          example: Logo design deposit
+        expiresInHours:
+          type: string
+          description: Number of hours until the link expires. Pass as a numeric string.
+          example: "48"
+
+    CreateQuickLinkSuccessResponse:
+      type: object
+      properties:
+        status:
+          type: string
+          example: success
+        statusCode:
+          type: integer
+          example: 201
+        data:
+          type: object
+          properties:
+            id:
+              type: integer
+              example: 10
+            token:
+              type: string
+              example: abc123xyz
+            amount:
+              type: number
+              nullable: true
+              example: 5000
+            description:
+              type: string
+              nullable: true
+              example: Logo design deposit
+            expiresAt:
+              type: string
+              format: date-time
+              nullable: true
+              example: "2026-05-13T12:00:00.000Z"
+            url:
+              type: string
+              example: /pay/abc123xyz
+
+    ServiceItem:
+      type: object
+      properties:
+        id:
+          type: integer
+          example: 1
+        name:
+          type: string
+          example: Website Design
+        description:
+          type: string
+          nullable: true
+          example: Full business website build
+        amount:
+          type: number
+          nullable: true
+          example: 150000
+        bankDetailsId:
+          type: integer
+          nullable: true
+          example: 1
+        paymentUrl:
+          type: string
+          example: /pay/abc123xyz
+        createdAt:
+          type: string
+          format: date-time
+          example: "2026-01-15T09:00:00.000Z"
+
+    ListServicesSuccessResponse:
+      type: object
+      properties:
+        status:
+          type: string
+          example: success
+        statusCode:
+          type: integer
+          example: 200
+        data:
+          type: array
+          items:
+            $ref: "#/components/schemas/ServiceItem"
+
+    CreateServiceRequest:
+      type: object
+      required:
+        - name
+      properties:
+        name:
+          type: string
+          example: Website Design
+        description:
+          type: string
+          example: Full business website build
+        amount:
+          type: string
+          description: Fixed price for this service. Pass as a numeric string.
+          example: "150000"
+        bankDetailsId:
+          type: string
+          description: ID of the bank account to receive payouts for this service. Pass as a numeric string.
+          example: "1"
+
+    CreateServiceSuccessResponse:
+      type: object
+      properties:
+        status:
+          type: string
+          example: success
+        statusCode:
+          type: integer
+          example: 201
+        data:
+          $ref: "#/components/schemas/ServiceItem"
+
+    UpdateServiceRequest:
+      type: object
+      properties:
+        name:
+          type: string
+          example: Website Design Pro
+        description:
+          type: string
+          example: Full business website build with SEO
+        amount:
+          type: string
+          description: Updated price. Pass as a numeric string.
+          example: "200000"
+        bankDetailsId:
+          type: string
+          description: Updated payout bank account ID. Pass as a numeric string.
+          example: "2"
+
+    UpdateServiceSuccessResponse:
+      type: object
+      properties:
+        status:
+          type: string
+          example: success
+        statusCode:
+          type: integer
+          example: 200
+        data:
+          $ref: "#/components/schemas/ServiceItem"
+
+    DeleteServiceSuccessResponse:
+      type: object
+      properties:
+        status:
+          type: string
+          example: success
+        statusCode:
+          type: integer
+          example: 200
+        message:
+          type: string
+          example: Service deleted
+
+    TransactionHistoryItem:
+      type: object
+      properties:
+        id:
+          type: integer
+          example: 42
+        amount:
+          type: number
+          example: 5000
+        status:
+          type: string
+          example: COMPLETED
+        createdAt:
+          type: string
+          format: date-time
+          example: "2026-05-13T14:22:10.000Z"
+        buyerName:
+          type: string
+          example: Emeka Obi
+        buyerEmail:
+          type: string
+          format: email
+          example: emeka@example.com
+
+    GetBusinessTransactionHistorySuccessResponse:
+      type: object
+      properties:
+        status:
+          type: string
+          example: success
+        statusCode:
+          type: integer
+          example: 200
+        data:
+          type: object
+          properties:
+            message:
+              type: string
+              example: Transaction history retrieved successfully
+            data:
+              type: array
+              items:
+                $ref: "#/components/schemas/TransactionHistoryItem"
+
+    GetPaymentPageSuccessResponse:
+      type: object
+      properties:
+        status:
+          type: string
+          example: success
+        statusCode:
+          type: integer
+          example: 200
+        data:
+          type: object
+          properties:
+            business:
+              type: object
+              properties:
+                name:
+                  type: string
+                  example: Ada Groceries Ltd
+                description:
+                  type: string
+                  nullable: true
+                  example: Retail grocery supplier for households and restaurants.
+                logo:
+                  type: string
+                  nullable: true
+                  example: https://res.cloudinary.com/demo/image/upload/logo.jpg
+                slug:
+                  type: string
+                  example: ada-groceries-ltd
+                trustScore:
+                  type: number
+                  example: 72.5
+                kycStatus:
+                  type: string
+                  example: VERIFIED
+                phoneNumber:
+                  type: string
+                  nullable: true
+                  example: +2348012345678
+                alternativePhoneNumber:
+                  type: string
+                  nullable: true
+                  example: +2348098765432
+                category:
+                  type: string
+                  nullable: true
+                  example: Retail
+                showCaseImages:
+                  type: array
+                  items:
+                    type: string
+                  example:
+                    - https://res.cloudinary.com/demo/image/upload/img1.jpg
+                socials:
+                  type: array
+                  items:
+                    $ref: "#/components/schemas/Social"
+                tier:
+                  type: object
+                  nullable: true
+                  properties:
+                    name:
+                      type: string
+                      example: BRONZE
+                owner:
+                  type: object
+                  nullable: true
+                  properties:
+                    firstName:
+                      type: string
+                      example: Ada
+                    lastName:
+                      type: string
+                      example: Okafor
+                trustScoreHistories:
+                  type: array
+                  items:
+                    type: object
+                    properties:
+                      score:
+                        type: number
+                        example: 68.0
+                      createdAt:
+                        type: string
+                        format: date-time
+                        example: "2026-04-01T10:00:00.000Z"
+                ratingsSummary:
+                  type: number
+                  nullable: true
+                  example: 4.6
+                ratingsCount:
+                  type: integer
+                  example: 27
+                reviews:
+                  type: array
+                  items:
+                    type: object
+                    properties:
+                      reviewerName:
+                        type: string
+                        example: Jane Doe
+                      rating:
+                        type: integer
+                        example: 5
+                      comment:
+                        type: string
+                        nullable: true
+                        example: Great service and fast delivery.
+                      createdAt:
+                        type: string
+                        format: date-time
+                        example: "2026-05-10T09:00:00.000Z"
+                totalAmountTransacted:
+                  type: number
+                  example: 2500000
+                successfulTransactionsCount:
+                  type: integer
+                  example: 183
+                totalVerifiedBuyers:
+                  type: integer
+                  example: 141
+                trustGrowth:
+                  type: string
+                  example: +8.3% in last 30 days
+            paymentLink:
+              type: object
+              properties:
+                type:
+                  type: string
+                  enum:
+                    - GENERIC
+                    - SERVICE
+                    - QUICK
+                  example: GENERIC
+                amount:
+                  type: number
+                  nullable: true
+                  example: 5000
+                description:
+                  type: string
+                  nullable: true
+                  example: Logo design deposit
+                isOneTime:
+                  type: boolean
+                  example: false
+
+    InitiatePaymentRequest:
+      type: object
+      required:
+        - buyerName
+        - buyerEmail
+      properties:
+        buyerName:
+          type: string
+          example: Emeka Obi
+        buyerEmail:
+          type: string
+          format: email
+          example: emeka@example.com
+        amount:
+          type: string
+          description: Required when the payment link has no fixed amount. Pass as a numeric string.
+          example: "5000"
+        isServiceRendered:
+          type: string
+          description: Pass "true" if the service has already been delivered. A rating token is returned immediately instead of waiting for an email.
+          enum:
+            - "true"
+            - "false"
+          example: "false"
+
+    InitiatePaymentSuccessResponse:
+      type: object
+      properties:
+        status:
+          type: string
+          example: success
+        statusCode:
+          type: integer
+          example: 201
+        data:
+          type: object
+          properties:
+            paymentId:
+              type: integer
+              example: 42
+            amount:
+              type: number
+              example: 5000
+            isServiceRendered:
+              type: boolean
+              example: false
+            ratingToken:
+              type: string
+              nullable: true
+              description: Only present when isServiceRendered is true.
+              example: null
+            message:
+              type: string
+              example: Payment recorded. You will receive an email to rate this vendor after the service is delivered.
+
+    GetRatingPageSuccessResponse:
+      type: object
+      properties:
+        status:
+          type: string
+          example: success
+        statusCode:
+          type: integer
+          example: 200
+        data:
+          type: object
+          properties:
+            paymentId:
+              type: integer
+              example: 42
+            buyerName:
+              type: string
+              example: Emeka Obi
+            amount:
+              type: number
+              example: 5000
+            business:
+              type: object
+              properties:
+                name:
+                  type: string
+                  example: Ada Groceries Ltd
+                logo:
+                  type: string
+                  nullable: true
+                  example: https://res.cloudinary.com/demo/image/upload/logo.jpg
+                slug:
+                  type: string
+                  example: ada-groceries-ltd
+                trustScore:
+                  type: number
+                  example: 72.5
+
+    SubmitRatingRequest:
+      type: object
+      required:
+        - rating
+      properties:
+        rating:
+          type: integer
+          minimum: 1
+          maximum: 5
+          example: 5
+        comment:
+          type: string
+          example: Great service, very professional!
+
+    SubmitRatingSuccessResponse:
+      type: object
+      properties:
+        status:
+          type: string
+          example: success
+        statusCode:
+          type: integer
+          example: 200
+        data:
+          type: object
+          properties:
+            message:
+              type: string
+              example: Thank you for your feedback!
+            newTrustScore:
+              type: number
+              example: 75.5
