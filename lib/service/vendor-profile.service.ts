@@ -97,7 +97,7 @@ type PublicProfileApiResponse = {
     }>;
     totalAmountTransacted: number;
     ratingsSummary: number;
-    ratingCount: number;
+    ratingsCount: number;
     reviews: Array<{
       reviewerName?: string;
       rating: number;
@@ -200,7 +200,7 @@ export function mapPublicProfileToVendorProfileData(
     servicesOffered: payload.services?.map((service) => service.name) ?? [],
     totalAmountTransacted: payload.totalAmountTransacted ?? 0,
     ratingSummary: payload.ratingsSummary ?? 0,
-    ratingCount: payload.ratingCount ?? 0,
+    ratingCount: payload.ratingsCount ?? 0,
     reviews: payload.reviews ?? [],
     serviceInfo: undefined,
     trustHistory: payload.trustGrowth ?? "Not available yet",
