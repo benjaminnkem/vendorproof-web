@@ -96,7 +96,7 @@ type PublicProfileApiResponse = {
       description: string | null;
     }>;
     totalAmountTransacted: number;
-    ratingSummary: number;
+    ratingsSummary: number;
     ratingCount: number;
     reviews: Array<{
       reviewerName?: string;
@@ -199,7 +199,7 @@ export function mapPublicProfileToVendorProfileData(
     category: payload.category ?? "Uncategorized",
     servicesOffered: payload.services?.map((service) => service.name) ?? [],
     totalAmountTransacted: payload.totalAmountTransacted ?? 0,
-    ratingSummary: payload.ratingSummary ?? 0,
+    ratingSummary: payload.ratingsSummary ?? 0,
     ratingCount: payload.ratingCount ?? 0,
     reviews: payload.reviews ?? [],
     serviceInfo: undefined,

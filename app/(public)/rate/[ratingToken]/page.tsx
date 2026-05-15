@@ -1,20 +1,19 @@
 import { PublicRatingPage } from "@/components/ui/rating/public-rating-page";
-import { PAYMENT_RATINGS, getPaymentRatingById } from "@/lib/data/mock-vendors";
+import { getPublicRatingPageByToken } from "@/lib/service/rating.service";
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 
+export const dynamic = "force-dynamic";
+
 type RouteProps = {
-  params: Promise<{ paymentId: string }>;
+  params: Promise<{ ratingToken: string }>;
 };
 
 export async function generateMetadata({
   params,
 }: RouteProps): Promise<Metadata> {
-  const { paymentId } = await params;
-  const parsedPaymentId = Number(paymentId);
-  const payment = Number.isNaN(parsedPaymentId)
-    ? undefined
-    : getPaymentRatingById(parsedPaymentId);
+  const { ratingToken } = await params;
+  const payment = await getPublicRatingPageByToken(ratingToken);
 
   if (!payment) {
     return {
@@ -28,25 +27,13 @@ export async function generateMetadata({
   };
 }
 
-export function generateStaticParams() {
-  return PAYMENT_RATINGS.map((payment) => ({
-    paymentId: payment.paymentId.toString(),
-  }));
-}
-
 export default async function PaymentRatingRoute({ params }: RouteProps) {
-  const { paymentId } = await params;
-  const parsedPaymentId = Number(paymentId);
-
-  if (Number.isNaN(parsedPaymentId)) {
-    notFound();
-  }
-
-  const payment = getPaymentRatingById(parsedPaymentId);
+  const { ratingToken } = await params;
+  const payment = await getPublicRatingPageByToken(ratingToken);
 
   if (!payment) {
     notFound();
   }
 
-  return <PublicRatingPage payment={payment} />;
+  return <PublicRatingPage ratingToken={ratingToken} payment={payment} />;
 }

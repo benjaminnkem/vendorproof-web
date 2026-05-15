@@ -6,13 +6,19 @@ import {
   StarIcon as StarIconOutline,
 } from "@heroicons/react/24/outline";
 import { StarIcon as StarIconSolid } from "@heroicons/react/24/solid";
+import { useMutation } from "@tanstack/react-query";
+import { AxiosError } from "axios";
 import { motion } from "framer-motion";
 import Link from "next/link";
 import { useRef, useState } from "react";
-import type { PaymentRatingPageData } from "@/lib/data/mock-vendors";
+import {
+  submitPublicRatingByToken,
+  type PublicRatingPageData,
+} from "@/lib/service/rating.service";
 
 type PublicRatingPageProps = {
-  payment: PaymentRatingPageData;
+  ratingToken: string;
+  payment: PublicRatingPageData;
 };
 
 const ratingLabels = ["Very poor", "Poor", "Good", "Very good", "Excellent"];
@@ -25,12 +31,31 @@ function formatNaira(value: number): string {
   }).format(value);
 }
 
-export function PublicRatingPage({ payment }: PublicRatingPageProps) {
+export function PublicRatingPage({
+  ratingToken,
+  payment,
+}: PublicRatingPageProps) {
   const [rating, setRating] = useState(0);
   const [feedback, setFeedback] = useState("");
-  const [isSubmitting, setIsSubmitting] = useState(false);
   const [isSubmitted, setIsSubmitted] = useState(false);
+  const [submitMessage, setSubmitMessage] = useState("");
+  const [updatedTrustScore, setUpdatedTrustScore] = useState<number | null>(
+    null,
+  );
   const feedbackRef = useRef<HTMLTextAreaElement | null>(null);
+
+  const submitRatingMutation = useMutation({
+    mutationFn: () =>
+      submitPublicRatingByToken(ratingToken, {
+        rating,
+        ...(feedback.trim().length > 0 ? { comment: feedback.trim() } : {}),
+      }),
+    onSuccess: (result) => {
+      setSubmitMessage(result.message);
+      setUpdatedTrustScore(result.newTrustScore);
+      setIsSubmitted(true);
+    },
+  });
 
   function onFeedbackChange(value: string) {
     setFeedback(value);
@@ -44,18 +69,35 @@ export function PublicRatingPage({ payment }: PublicRatingPageProps) {
 
   async function onSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    if (rating < 1 || isSubmitting) {
+    if (rating < 1 || submitRatingMutation.isPending) {
       return;
     }
 
-    setIsSubmitting(true);
-
-    // Placeholder until backend submission is connected.
-    await new Promise((resolve) => setTimeout(resolve, 900));
-
-    setIsSubmitting(false);
-    setIsSubmitted(true);
+    await submitRatingMutation.mutateAsync();
   }
+
+  function getErrorMessage() {
+    const mutationError = submitRatingMutation.error;
+
+    if (!mutationError) {
+      return null;
+    }
+
+    if (mutationError instanceof AxiosError) {
+      const apiMessage = mutationError.response?.data?.message;
+      if (typeof apiMessage === "string" && apiMessage.trim().length > 0) {
+        return apiMessage;
+      }
+    }
+
+    if (mutationError instanceof Error) {
+      return mutationError.message;
+    }
+
+    return "Unable to submit your rating right now. Please try again.";
+  }
+
+  const errorMessage = getErrorMessage();
 
   return (
     <div className="vp-ambient-grid vp-page">
@@ -98,7 +140,8 @@ export function PublicRatingPage({ payment }: PublicRatingPageProps) {
             <div>
               <h2 className="vp-headline text-2xl">{payment.business.name}</h2>
               <p className="vp-muted mt-1 text-sm">
-                Trust score: {payment.business.trustScore.toFixed(1)}
+                Trust score:{" "}
+                {(updatedTrustScore ?? payment.business.trustScore).toFixed(1)}
               </p>
             </div>
           </div>
@@ -209,11 +252,17 @@ export function PublicRatingPage({ payment }: PublicRatingPageProps) {
 
               <button
                 type="submit"
-                disabled={rating < 1 || isSubmitting}
+                disabled={rating < 1 || submitRatingMutation.isPending}
                 className="inline-flex w-full items-center justify-center rounded-full bg-chartwell-blue px-5 py-3 text-sm font-semibold text-cloud-white transition hover:-translate-y-0.5 hover:brightness-95 disabled:cursor-not-allowed disabled:opacity-70"
               >
-                {isSubmitting ? "Submitting rating..." : "Submit rating"}
+                {submitRatingMutation.isPending
+                  ? "Submitting rating..."
+                  : "Submit rating"}
               </button>
+
+              {errorMessage ? (
+                <p className="text-xs text-rose-300">{errorMessage}</p>
+              ) : null}
             </form>
           ) : (
             <motion.div
@@ -227,7 +276,8 @@ export function PublicRatingPage({ payment }: PublicRatingPageProps) {
                 Rating submitted
               </p>
               <p className="vp-muted mt-2 text-sm">
-                Thanks, {payment.buyerName}. You rated this payment {rating}/5.
+                {submitMessage ||
+                  `Thanks, ${payment.buyerName}. You rated this payment ${rating}/5.`}
               </p>
               {feedback.trim() ? (
                 <p className="mt-3 rounded-lg border border-canvas-border bg-canvas-surface px-3 py-2 text-sm text-slate-text">
