@@ -1,36 +1,176 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# VendorProof Web
 
-## Getting Started
+Public-facing web app for VendorProof, built with Next.js App Router.
 
-First, run the development server:
+This app powers:
 
-```bash
+- Vendor marketplace discovery
+- Public vendor trust profiles
+- Public payment links and checkout handoff
+- Payment verification receipt pages
+- Public buyer rating pages
+
+It consumes the VendorProof backend API (documented in docs.yaml) via a shared Axios client.
+
+## Tech Stack
+
+- Next.js 16 (App Router)
+- React 19
+- TypeScript
+- Tailwind CSS 4
+- React Query (TanStack Query)
+- Axios
+- Framer Motion + Lenis
+
+## Prerequisites
+
+Install the following before running locally:
+
+- Node.js 20+ (recommended: latest LTS)
+- npm 10+
+
+Check installed versions:
+
+node -v
+npm -v
+
+## Environment Variables
+
+This frontend currently requires one runtime env variable:
+
+- NEXT_PUBLIC_API_URL
+
+Used by the HTTP client in lib/config/http.config.ts as the backend base URL.
+
+Create a file named .env.local in the project root with:
+
+NEXT_PUBLIC_API_URL=https://vendorproof.oluwadunsin.dev/api
+
+Notes:
+
+- If NEXT_PUBLIC_API_URL is missing, the app falls back to https://vendorproof.oluwadunsin.dev/api.
+- Because this is a NEXT_PUBLIC variable, it is exposed to the browser bundle by design.
+- Do not put secrets in NEXT_PUBLIC variables.
+
+## Quick Start (Developer Setup)
+
+1.  Install dependencies:
+
+npm install
+
+2.  Add env file:
+
+    Create .env.local in the project root and add:
+
+    NEXT_PUBLIC_API_URL=http://localhost:4000/api
+
+Then update it if your backend runs on a different host/port.
+
+3.  Start the dev server:
+
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
-```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+4.  Open:
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+http://localhost:3000
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+## Scripts
 
-## Learn More
+- npm run dev
+  Starts Next.js in development mode.
 
-To learn more about Next.js, take a look at the following resources:
+- npm run build
+  Builds production assets.
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+- npm run start
+  Runs the production server (after build).
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+## Local Development Flow
 
-## Deploy on Vercel
+Run frontend only:
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+1. Ensure backend API is running and reachable at NEXT_PUBLIC_API_URL.
+2. Run npm run dev.
+3. Open homepage and test route-level pages (see Route Map below).
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+Production-like local run:
+
+1. npm run build
+2. npm run start
+
+## Route Map (Public App)
+
+- /
+  Marketplace page (vendor listing + search/filter)
+
+- /vendor/[vendorSlug]
+  Public vendor profile page
+
+- /pay/[token]
+  Public payment page for a vendor payment token
+
+- /payment/verify?reference=...
+  Payment verification receipt page
+
+- /rate/[ratingToken]
+  Buyer rating page after payment
+
+## API Dependency
+
+The app is API-driven. Core requests include:
+
+- GET /business
+- GET /business/{slug}
+- GET /pay/{token}
+- POST /pay/{token}
+- GET /pay/verify/{reference}
+- GET /pay/rate/{ratingToken}
+- POST /pay/rate/{ratingToken}
+
+See docs.yaml for the full backend OpenAPI specification.
+
+## Project Structure (Key Areas)
+
+- app/
+  Next.js App Router entrypoints and routes
+
+- components/ui/
+  Page-level and feature UI components
+
+- lib/service/
+  API service modules and response mapping
+
+- lib/config/http.config.ts
+  Shared Axios instance and baseURL config
+
+- docs.yaml
+  Backend API contract consumed by this frontend
+
+## Troubleshooting
+
+If the app loads but data does not appear:
+
+- Confirm NEXT_PUBLIC_API_URL is correct.
+- Confirm backend is running and CORS allows this frontend origin.
+- Open browser DevTools Network tab and inspect failed API calls.
+
+If pages return not found unexpectedly:
+
+- Verify dynamic route params are valid (token, vendorSlug, ratingToken).
+- Verify backend returns 200 for the corresponding endpoint.
+
+If env changes are not reflected:
+
+- Restart the dev server after editing .env.local.
+
+## Notes for Contributors
+
+- Keep API mapping logic in lib/service instead of inside UI components.
+- Prefer strong typing for API payloads and response mappers.
+- Keep route pages thin and push behavior into components/services.
+
+## Reference Docs
+
+- Product and vision details: INFO.MD
+- UI design direction: DESIGN.MD
+- API specification: docs.yaml
